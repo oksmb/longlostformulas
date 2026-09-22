@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lost Formulas asset viewer</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#fff8ec;--panel:#f6e8d2;--line:#e2ccab;--ink:#3a2216;--muted:#7d604c;--shell:#c98a00;--shell-ink:#fff;--view:#d9ecf7;--bad:#b3261e}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1f130d;--panel:#2a1a12;--line:#4a3022;--ink:#f6ead8;--muted:#b89c86;--shell:#ffd21f;--shell-ink:#2a1a12;--view:#120b07;--bad:#ff8a80}}
+:root[data-theme="dark"]{--bg:#1f130d;--panel:#2a1a12;--line:#4a3022;--ink:#f6ead8;--muted:#b89c86;--shell:#ffd21f;--shell-ink:#2a1a12;--view:#120b07;--bad:#ff8a80}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;display:grid;grid-template-columns:320px 1fr;overflow:hidden}
+aside{background:var(--panel);border-right:1px solid var(--line);padding:20px 18px;overflow-y:auto;display:flex;flex-direction:column;gap:18px}
+h1{font:600 24px/1.1 Fredoka,"Trebuchet MS",system-ui,sans-serif;margin:0;letter-spacing:.2px}
+h2{font:600 15px/1.2 Fredoka,"Trebuchet MS",system-ui,sans-serif;margin:0 0 8px}
+p{margin:0;color:var(--muted)}
+.drop{border:2px dashed var(--line);border-radius:14px;padding:16px;text-align:center;transition:border-color .15s,background .15s}
+.drop.over{border-color:var(--shell);background:color-mix(in srgb,var(--shell) 12%,transparent)}
+button,.pick{font:600 14px/1 Fredoka,system-ui,sans-serif;background:var(--shell);color:var(--shell-ink);border:0;border-radius:999px;padding:10px 16px;cursor:pointer;display:inline-block}
+.pick.alt,button.quiet{background:transparent;color:var(--ink);border:1px solid var(--line)}
+button:focus-visible,.pick:focus-within,select:focus-visible,input:focus-visible{outline:3px solid var(--shell);outline-offset:2px}
+input[type=file]{position:absolute;opacity:0;width:1px;height:1px}
+select,input[type=range]{width:100%}
+select{background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:7px}
+dl{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;margin:0}
+dt{color:var(--muted)}dd{margin:0;text-align:right;font-variant-numeric:tabular-nums}
+.row{display:flex;gap:8px;align-items:center}
+.row>*{flex:0 0 auto}.row>input{flex:1 1 auto}
+#sounds button{padding:6px 10px;font-size:13px}
+#thumbs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+#thumbs canvas{width:100%;aspect-ratio:1;object-fit:contain;background:var(--view);border-radius:6px;image-rendering:pixelated}
+#err{color:var(--bad)}
+main{position:relative;background:var(--view);min-width:0;min-height:0}
+#gl{width:100%;height:100%;display:block;touch-action:none;cursor:grab}
+#gl:active{cursor:grabbing}
+#hint{position:absolute;left:14px;bottom:12px;right:14px;color:var(--muted);font-size:13px;pointer-events:none;text-shadow:0 1px 2px var(--view)}
+#empty{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:24px;color:var(--muted);pointer-events:none}
+[hidden]{display:none!important}
+@media (max-width:760px){body{grid-template-columns:1fr;grid-template-rows:auto 60vh;overflow:auto}aside{border-right:0;border-bottom:1px solid var(--line)}}
+</style>
+</head>
+<body>
+<aside>
+  <div>
+    <h1>Lost Formulas asset viewer</h1>
+    <p>Opens models (.GRP), level geometry (.OFF) and level scripts (.LEV) from the game's DATA folder. Files are read in your browser and never uploaded.</p>
+  </div>
+  <div class="drop" id="drop">
+    <div class="row" style="justify-content:center;flex-wrap:wrap"><label class="pick">Choose files<input type="file" id="file" multiple accept=".grp,.GRP,.off,.OFF,.lev,.LEV"></label>
+    <label class="pick alt">Choose a folder<input type="file" id="dir" webkitdirectory multiple></label></div>
+    <p style="margin-top:8px">or drop files or whole folders anywhere. For a populated level, pick a level folder together with GROUPS and ROBOTS.</p>
+  </div>
+  <p id="err" role="alert" hidden></p>
+  <section id="info" hidden>
+    <h2 id="fname"></h2>
+    <dl id="stats"></dl>
+  </section>
+  <section id="meshBox" hidden>
+    <h2>Mesh</h2>
+    <select id="meshSel" aria-label="Mesh to show"></select>
+  </section>
+  <section id="animBox" hidden>
+    <h2>Animation</h2>
+    <select id="animSel" aria-label="Animation" style="margin-bottom:8px"></select>
+    <div class="row"><button id="play" type="button">Pause</button><input id="frame" type="range" min="0" max="0" value="0" aria-label="Frame"><span id="frameNo">0</span></div>
+  </section>
+  <section id="sndBox" hidden>
+    <h2>Sound effects</h2>
+    <div id="sounds" class="row" style="flex-wrap:wrap"></div>
+  </section>
+  <section id="actorBox" hidden>
+    <h2>Actors</h2>
+    <p id="missing" style="margin-bottom:8px"></p>
+    <button class="quiet" id="actors" type="button">Hide actors</button>
+  </section>
+  <section id="viewBox" hidden>
+    <h2>View</h2>
+    <div class="row" style="flex-wrap:wrap"><button class="quiet" id="reset" type="button">Reset camera</button><button class="quiet" id="wire" type="button">Show wireframe</button></div>
+  </section>
+  <section id="texBox" hidden>
+    <h2 id="texTitle">Textures</h2>
+    <div id="thumbs"></div>
+  </section>
+</aside>
+<main>
+  <canvas id="gl"></canvas>
+  <div id="empty"><p>Nothing loaded yet. Try <b>YELLOW.GRP</b> for the hero with his animations and sounds,<br>or <b>L01P1.OFF</b> and <b>L01P1.LEV</b> together for the first level with its actors.</p></div>
+  <div id="hint" hidden></div>
+</main>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>

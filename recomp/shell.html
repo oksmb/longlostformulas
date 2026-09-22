@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>M&amp;M's: The Lost Formulas</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#fff8ec;--panel:#f6e8d2;--line:#e2ccab;--ink:#3a2216;--muted:#7d604c;--shell:#c98a00;--shell-ink:#fff}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1f130d;--panel:#2a1a12;--line:#4a3022;--ink:#f6ead8;--muted:#b89c86;--shell:#ffd21f;--shell-ink:#2a1a12}}
+:root[data-theme="dark"]{--bg:#1f130d;--panel:#2a1a12;--line:#4a3022;--ink:#f6ead8;--muted:#b89c86;--shell:#ffd21f;--shell-ink:#2a1a12}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{min-height:100%;display:flex;flex-direction:column;align-items:center;gap:10px;padding:12px}
+#stage{position:relative;width:100%;max-width:min(100%,calc((100vh - 96px) * 4 / 3));aspect-ratio:4/3;background:#000;border-radius:10px;overflow:hidden}
+#stage:fullscreen{max-width:none;width:100vw;height:100vh;border-radius:0;display:grid;place-items:center}
+#stage:fullscreen #screen{width:min(100vw,133.33vh);height:min(100vh,75vw)}
+#screen{width:100%;height:100%;display:block;outline:none}
+.cine{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#000}
+#overlay{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:24px;color:#f6ead8;background:#000}
+#ovmsg{margin:0;font:600 17px/1.4 Fredoka,"Trebuchet MS",system-ui,sans-serif}
+#bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:center;width:100%;max-width:960px}
+button,.pick{font:600 14px/1 Fredoka,system-ui,sans-serif;background:var(--shell);color:var(--shell-ink);border:0;border-radius:999px;padding:9px 16px;cursor:pointer;display:inline-block}
+button.quiet,.pick.quiet{background:transparent;color:var(--ink);border:1px solid var(--line)}
+button:focus-visible,.pick:focus-within,summary:focus-visible{outline:3px solid var(--shell);outline-offset:2px}
+input[type=file]{position:absolute;opacity:0;width:1px;height:1px}
+summary{cursor:pointer;color:var(--muted);font-size:14px;list-style:none}
+summary::-webkit-details-marker{display:none}
+summary::before{content:"\25B8  ";display:inline-block;transition:transform .15s}
+details[open]>summary::before{transform:rotate(90deg)}
+details{width:100%;max-width:960px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;margin-top:10px;display:grid;gap:10px;justify-items:start}
+p{margin:0;color:var(--muted);max-width:75ch}
+code{font:12px/1.4 ui-monospace,Menlo,Consolas,monospace;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:1px 5px;word-break:break-all}
+#status{font-variant-numeric:tabular-nums;color:var(--muted);font-size:13px;min-height:1.2em}
+#log{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:8px 10px;height:150px;overflow:auto;font:12px/1.5 ui-monospace,Menlo,Consolas,monospace;white-space:pre-wrap;width:100%}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;width:100%}
+[hidden]{display:none!important}
+</style></head><body><main>
+<div id="stage">
+  <canvas id="screen" width="960" height="720" tabindex="0"></canvas>
+  <div id="overlay"><p id="ovmsg">Starting</p></div>
+</div>
+
+<div id="bar" hidden>
+  <button id="full" type="button">Fullscreen</button>
+</div>
+
+<details id="adv"><summary>Advanced</summary>
+  <div class="panel">
+    <div id="picker" hidden style="display:grid;gap:10px;justify-items:start;width:100%">
+      <p>Point the page at your own copy of the game. Nothing is uploaded; the files stay in this browser tab.</p>
+      <div class="row">
+        <label class="pick">Choose the .iso file<input type="file" id="isoFile" accept=".iso,.ISO"></label>
+        <label class="pick quiet">Choose the game folder<input type="file" id="dir" webkitdirectory multiple></label>
+      </div>
+      <div class="row">
+        <input id="isoUrl" type="url" placeholder="https://your-host.example/lost-formulas.iso" aria-label="Disc image address" style="flex:1 1 260px;padding:8px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font:13px ui-monospace,Menlo,Consolas,monospace">
+        <button id="isoGo" type="button" class="quiet">Stream from this address</button>
+      </div>
+      <p>To skip this step, put the CD's files (or <code>game.iso</code>) next to this page on a web server, or pass <code>?iso=</code> or <code>?game=</code> in the address. Streaming from another site needs that site to allow cross-origin range requests.</p>
+    </div>
+    <div class="row">
+      <button id="isoClear" type="button" class="quiet">Clear cached game data and videos</button>
+      <button id="reset" type="button" class="quiet">Clear saved players and settings</button>
+    </div>
+    <p>Arrow keys move, Space jumps, Alt attacks, F1 shows level information, M opens the menu, Enter confirms. A gamepad works too. Cutscenes are decoded in the browser the first time they play, which takes a few seconds each.</p>
+    <span id="status" role="status"></span>
+    <div id="log" aria-label="Messages"></div>
+  </div>
+</details>
+</main>
